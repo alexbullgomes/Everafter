@@ -1,73 +1,74 @@
-# Welcome to your Lovable project
+# Everafter
 
-## Project info
+Site da Everafter California — portfólio de fotografia e videografia, landing pages de campanhas promocionais, blog, chat de visitantes, agendamento e pagamentos, com dashboards de admin e de usuário.
 
-**URL**: https://lovable.dev/projects/b50c6da6-66bc-437c-9e46-f8662a567a74
+- **Produção**: https://www.everafterca.com
+- **Hospedagem**: Vercel (deploy automático a partir da branch `main`)
+- **Backend**: Supabase (Postgres, Auth, Storage, Realtime, Edge Functions) — projeto `hmdnronxajctsrlgrhey`
 
-## How can I edit this code?
+## Stack
 
-There are several ways of editing your application.
+Vite · React 18 · TypeScript · Tailwind CSS · shadcn/ui · React Router v6 · TanStack Query · Supabase · Stripe
 
-**Use Lovable**
+## Desenvolvimento local
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b50c6da6-66bc-437c-9e46-f8662a567a74) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Requer Node 22.x (ver `engines` no `package.json`).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm ci          # respeita o .npmrc (legacy-peer-deps)
+npm run dev     # http://localhost:8080
 ```
 
-**Edit a file directly in GitHub**
+Outros comandos:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+npm run build                            # build de produção -> dist/
+npm run lint                             # ESLint
+npx tsc -p tsconfig.app.json --noEmit    # typecheck (NÃO faz parte do build)
+npm run preview                          # serve o build local
+```
 
-**Use GitHub Codespaces**
+Não há framework de testes configurado neste projeto.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Variáveis de ambiente
 
-## What technologies are used for this project?
+Nenhuma é obrigatória. As credenciais do Supabase (URL + anon key, públicas por design e protegidas por RLS) estão em `src/integrations/supabase/client.ts`. Veja `.env.example` para as opcionais.
 
-This project is built with:
+Segredos de servidor (Stripe, webhooks n8n, service role) vivem nos **secrets do Supabase**, não na Vercel — as edge functions os leem via `Deno.env.get()`.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Sobre o `.npmrc`
 
-## How can I deploy this project?
+`react-day-picker@8` declara peer dependency `date-fns ^2 || ^3`, mas o projeto usa `date-fns@4`. Sem `legacy-peer-deps=true` o `npm ci` falha com ERESOLVE, local e na Vercel. Remover quando o `react-day-picker` for atualizado para a v9.
 
-Simply open [Lovable](https://lovable.dev/projects/b50c6da6-66bc-437c-9e46-f8662a567a74) and click on Share -> Publish.
+## Deploy
 
-## Can I connect a custom domain to my Lovable project?
+### Frontend (Vercel)
 
-Yes, you can!
+Push na `main` dispara o deploy de produção. PRs geram preview deployments em `*.vercel.app`.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+A configuração está em `vercel.json`. O ponto crítico é o rewrite `/(.*) → /index.html`: a app é uma SPA com `BrowserRouter`, então sem ele qualquer deep link (`/blog/<slug>`, `/promo/<slug>`, `/dashboard/*`) retorna 404 quando acessado diretamente.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Edge Functions (Supabase CLI)
+
+**Não são deployadas pela Vercel.** Após alterar qualquer coisa em `supabase/functions/`:
+
+```sh
+supabase link --project-ref hmdnronxajctsrlgrhey
+supabase functions deploy <nome-da-funcao>
+```
+
+As funções `webhook-proxy` e `consultation-webhook-proxy` têm uma allowlist de CORS — qualquer origem nova (um domínio novo, por exemplo) precisa ser adicionada lá, senão os formulários falham silenciosamente no browser.
+
+### Migrations
+
+Alterações de schema entram como novos arquivos SQL timestamped em `supabase/migrations/`.
+
+## DNS
+
+O domínio `everafterca.com` é gerenciado na **Hostinger**, com nameservers `ns1/ns2.dns-parking.com`. Apenas os registros `A` (apex) e `www` apontam para a Vercel.
+
+⚠️ **Nunca trocar os nameservers para a Vercel.** Os registros `MX` apontam para o Google Workspace — trocar os NS derrubaria o e-mail da empresa.
+
+## Convenções
+
+Ver `CLAUDE.md` para as convenções de arquitetura (padrão de hooks de acesso a dados, theming dinâmico via CSS variables, sistema de chat). `KNOWLEDGE_BASE.md` tem contexto de schema, mas é parcialmente desatualizado — o código é a fonte de verdade.

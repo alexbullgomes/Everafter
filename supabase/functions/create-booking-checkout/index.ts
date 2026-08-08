@@ -259,7 +259,7 @@ serve(async (req) => {
       customerEmail = userData?.user?.email;
     }
 
-    const origin = req.headers.get("origin") || "https://everafter.lovable.app";
+    const origin = req.headers.get("origin") || "https://www.everafterca.com";
     
     // Determine cancel URL based on mode
     const cancelUrl = campaign_mode 

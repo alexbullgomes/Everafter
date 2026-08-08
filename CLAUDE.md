@@ -4,11 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Everafter is a photography/videography business site (public portfolio, promotional campaign landing pages, blog, visitor chat, booking/payments) with admin and user dashboards. It is a **Lovable project** (lovable.dev) — changes made in Lovable are auto-committed to this repo, and some files are Lovable-generated (see below).
+Everafter is a photography/videography business site (public portfolio, promotional campaign landing pages, blog, visitor chat, booking/payments) with admin and user dashboards. It **used to be** a Lovable project; hosting has since moved to **Vercel** (auto-deploy from `main`) and the Lovable integration is gone. Some files are still Lovable-generated and marked as such (see below) — treat those as generated, not hand-authored.
+
+Deployment split that matters: **Vercel builds and serves the frontend only.** `supabase/functions/` are deployed separately via the Supabase CLI (`supabase functions deploy <name>`) and will NOT ship with a Vercel deploy. Server-side secrets live in Supabase, not Vercel.
 
 ## Commands
 
 ```sh
+npm ci             # install (needs .npmrc legacy-peer-deps; plain `npm i` may re-resolve)
 npm run dev        # Vite dev server on port 8080
 npm run build      # production build (does NOT typecheck)
 npm run build:dev  # development-mode build
@@ -33,12 +36,15 @@ npx tsc -p tsconfig.app.json --noEmit   # typecheck (not part of build)
 
 Roles live in `profiles.role` and are checked client-side via `useRole` (`src/hooks/useRole.ts`); real enforcement is Supabase RLS.
 
+It's a SPA on `BrowserRouter`. `vercel.json` rewrites `/(.*)` → `/index.html` so deep links resolve; without that rewrite every non-root URL 404s on a hard load. Don't remove it.
+
 ### Supabase
 
 - `src/integrations/supabase/client.ts` — **auto-generated, do not edit** (URL/anon key are intentionally hardcoded by Lovable). Import as `import { supabase } from "@/integrations/supabase/client"`.
 - `src/integrations/supabase/types.ts` — generated DB types (the source of truth for the schema shape); regenerated from the database, do not hand-edit.
 - `supabase/migrations/` — 100+ timestamped SQL migrations (Lovable-generated). Schema changes go here as new migration files.
 - `supabase/functions/` — Deno edge functions: visitor chat (`visitor-chat`, `chat-response`, `chat-webhook-callback`), n8n webhook proxies (`webhook-proxy`, `consultation-webhook-proxy`), Stripe (`create-booking-checkout`, `stripe-webhook`, `manual-payment`). All have `verify_jwt = false` in `supabase/config.toml` and handle their own auth/CORS.
+- `webhook-proxy` and `consultation-webhook-proxy` enforce a CORS **origin allowlist** (`ALLOWED_ORIGINS` + `.vercel.app` suffix for previews). A new origin that isn't listed fails in the browser only — the function itself returns 200, so these breakages are easy to miss. Every other function uses `'*'`.
 
 ### Data-access pattern
 

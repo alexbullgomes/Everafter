@@ -3,12 +3,15 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
 
 // Restrict CORS to specific origins for security
+const DEFAULT_ORIGIN = 'https://www.everafterca.com';
+
 const ALLOWED_ORIGINS = [
+  DEFAULT_ORIGIN,
+  'https://everafterca.com',
+  // TODO: remover apos o cutover de DNS para a Vercel estar confirmado
   'https://everafter.lovable.app',
   'https://everafter-studio.lovable.app',
   'https://hmdnronxajctsrlgrhey.lovableproject.com',
-  'https://everafterca.com',
-  'https://www.everafterca.com',
 ];
 
 const corsHeaders = {
@@ -18,16 +21,18 @@ const corsHeaders = {
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
   const isAllowed = origin && (
-    ALLOWED_ORIGINS.includes(origin) || 
+    ALLOWED_ORIGINS.includes(origin) ||
     origin.includes('localhost') ||
     origin.includes('127.0.0.1') ||
+    // Preview deployments da Vercel
+    origin.endsWith('.vercel.app') ||
     origin.endsWith('.lovable.app') ||
     origin.endsWith('.lovableproject.com')
   );
-  
+
   return {
     ...corsHeaders,
-    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Origin': isAllowed ? origin : DEFAULT_ORIGIN,
   };
 }
 
